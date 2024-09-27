@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Feed with OCR and Regex Matching</title>
+    <style>
+        body {}
+
+        div {
+            display: flex;
+            width: 100%;
+            justify-content: center;
+            /* Center horizontally */
+            margin: 0;
+        }
+
+        video {
+            width: 50%;
+            border-radius: 10px;
+            object-fit: cover;
+            border: 2px solid #ccc;
+        }
+
+        /* Adjust video size for mobile devices */
+        @media (max-width: 800px) {
+            video {
+                width: 90%;
+                /* 90% of viewport width */
+                height: auto; /* Let the aspect-ratio maintain the height */
+            }
+
+            #matches-container {
+                font-size: 30px;
+            }
+        }
+
+        #matches-container {
+            margin-top: 20px;
+            font-size: 50px;
+            text-align: center;
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .ellipsis {
+            font-size: 24px;
+        }
+
+        canvas {
+            display: none;
+            /* Keep canvas hidden */
+        }
+        
+    </style>
+</head>
+
+<body>
+    <div><H1>🍓 How many R's? 🍓</H1></div>
+    <div><H2 style="max-width: 600px; text-align: center;">Point your camera at the word 'strawberry', and we'll figure out how many R's there are!</H2></div>
+    <div>
+        <video id="video" autoplay></video>
+    </div>
+    <canvas id="canvas"></canvas>
+    <!-- Container for matched substrings -->
+    <div>
+        <ul id="matches-container"></ul>
+    </div>
+
+    <!-- Include Tesseract.js -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const matchesContainer = document.getElementById('matches-container');
+
+        // Updated regex pattern (removed 'gi')
+        const regexPattern = /s\S*t\S*a\S*w\S*b\S*e\S*y/g;
+
+        // Ask for permission to use the camera
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'environment'
+                }
+            }).then(function (stream) {
+                video.srcObject = stream;
+                video.play();
+                // Start the OCR loop once the video starts playing
+                video.addEventListener('playing', startOCRLoop);
+            }).catch(function (err) {
+                console.error("Error accessing camera: ", err);
+            });
+        }
+
+        function startOCRLoop() {
+            captureFrameAndPerformOCR().then(() => {
+                // Start the loop again once OCR is complete
+                startOCRLoop();
+            });
+        }
+
+        function captureFrameAndPerformOCR() {
+            return new Promise((resolve, reject) => {
+                // Set the canvas size to match the video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Draw the current video frame onto the canvas
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Get the image data from the canvas
+                const imageData = canvas.toDataURL('image/png');
+
+                // Use Tesseract.js to perform OCR on the image data
+                Tesseract.recognize(
+                    imageData,
+                    'eng'
+                ).then(({ data: { text } }) => {
+                    console.log(text)
+                    const matches = text.match(regexPattern);
+                    displayMatches(matches || []); // Call display function
+                    resolve(); // Resolve the promise to indicate OCR is done
+                }).catch(err => {
+                    console.error('OCR error:', err);
+                    reject(err); // Reject the promise if an error occurs
+                });
+            });
+        }
+
+        function displayMatches(matches) {
+            console.log(matches)
+            // Clear the previous matches
+            if (matches.length == 0) {
+                matchesContainer.innerHTML = 'No 🍓 detected...'
+            } else {
+                matchesContainer.innerHTML = ''
+            }
+
+            // Show only the first 3 matches and add an ellipsis if necessary
+            const maxMatches = 3;
+            matches.slice(0, maxMatches).forEach(match => {
+                const matchElement = document.createElement('li');
+                matchElement.textContent = match;
+                matchesContainer.appendChild(matchElement);
+            });
+
+            // Add ellipsis if there are more than 3 matches
+            if (matches.length > maxMatches) {
+                const ellipsisElement = document.createElement('li');
+                ellipsisElement.textContent = '...';
+                ellipsisElement.className = 'ellipsis';
+                matchesContainer.appendChild(ellipsisElement);
+            }
+        }
+    </script>
+</body>
+
+</html>
