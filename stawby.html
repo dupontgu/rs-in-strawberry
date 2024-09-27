@@ -4,44 +4,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Feed with OCR and Regex Matching</title>
+    <title>🍓R#</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
     <style>
-        body {}
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f7f0c1;
+        }
 
-        div {
+        h1 {
+            font-family: 'Lilita One', cursive;
+            font-size: 50px;
+            margin-bottom: 0px;
+        }
+
+        p {
+            font-family: 'Montserrat', sans-serif;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .centered {
             display: flex;
             width: 100%;
             justify-content: center;
-            /* Center horizontally */
             margin: 0;
         }
 
         video {
             width: 50%;
+            max-width: 600px;
             border-radius: 10px;
             object-fit: cover;
             border: 2px solid #ccc;
         }
 
-        /* Adjust video size for mobile devices */
         @media (max-width: 800px) {
             video {
                 width: 90%;
-                /* 90% of viewport width */
-                height: auto; /* Let the aspect-ratio maintain the height */
+                height: auto;
+                aspect-ratio: 16/10;
             }
 
             #matches-container {
-                font-size: 30px;
+                font-size: 24px;
             }
         }
 
-        #matches-container {
+        #matches-container,
+        #matches-header {
             margin-top: 20px;
-            font-size: 50px;
+            font-size: 30px;
             text-align: center;
             list-style-type: none;
             padding: 0;
+        }
+
+        .on-bottom {
+            position: fixed;
+            bottom: 0%;
         }
 
         .ellipsis {
@@ -52,20 +77,40 @@
             display: none;
             /* Keep canvas hidden */
         }
-        
+
+        a:link {
+            color: rgb(203, 31, 25);
+        }
     </style>
 </head>
 
 <body>
-    <div><H1>🍓 How many R's? 🍓</H1></div>
-    <div><H2 style="max-width: 600px; text-align: center;">Point your camera at the word 'strawberry', and we'll figure out how many R's there are!</H2></div>
-    <div>
+    <div class="centered">
+        <H1>🍓 How many R's? 🍓</H1>
+    </div>
+    <div class="centered">
+        <p style="max-width: 700px; text-align: center; margin-bottom: 30px; padding-left: 20px; padding-right: 20px;">
+            Point your camera at the word 'strawberry', and we'll figure
+            out how many R's there are!</p>
+    </div>
+    <div class="centered">
         <video id="video" autoplay></video>
     </div>
     <canvas id="canvas"></canvas>
-    <!-- Container for matched substrings -->
-    <div>
-        <ul id="matches-container"></ul>
+    <div id="matches-header" class="centered">
+        No 🍓 detected...
+    </div>
+
+    <ul id="matches-container"></ul>
+
+    <div class="on-bottom" style="width: 100%;">
+        <p class="centered" style="margin-bottom: 10px;">
+            <a href="https://www.linktr.ee/guy_dupont">Guy Dupont</a>&nbsp;made this.
+        </p>
+        <div id="sfc15tynus3sb1d9jb1659rzpz2aw3l63wj" class="centered"></div>
+        <script type="text/javascript"
+            src="https://counter6.optistats.ovh/private/counter.js?c=15tynus3sb1d9jb1659rzpz2aw3l63wj&down=async" async>
+            </script>
     </div>
 
     <!-- Include Tesseract.js -->
@@ -76,11 +121,9 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const matchesContainer = document.getElementById('matches-container');
+        const matchesHeader = document.getElementById('matches-header');
+        const regexPattern = /s\S*t\S*a\S*w\S*b\S*e\S*y/ig;
 
-        // Updated regex pattern (removed 'gi')
-        const regexPattern = /s\S*t\S*a\S*w\S*b\S*e\S*y/g;
-
-        // Ask for permission to use the camera
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({
                 video: {
@@ -89,7 +132,6 @@
             }).then(function (stream) {
                 video.srcObject = stream;
                 video.play();
-                // Start the OCR loop once the video starts playing
                 video.addEventListener('playing', startOCRLoop);
             }).catch(function (err) {
                 console.error("Error accessing camera: ", err);
@@ -98,57 +140,47 @@
 
         function startOCRLoop() {
             captureFrameAndPerformOCR().then(() => {
-                // Start the loop again once OCR is complete
                 startOCRLoop();
             });
         }
 
         function captureFrameAndPerformOCR() {
             return new Promise((resolve, reject) => {
-                // Set the canvas size to match the video
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-
-                // Draw the current video frame onto the canvas
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                // Get the image data from the canvas
                 const imageData = canvas.toDataURL('image/png');
-
-                // Use Tesseract.js to perform OCR on the image data
                 Tesseract.recognize(
                     imageData,
                     'eng'
                 ).then(({ data: { text } }) => {
-                    console.log(text)
                     const matches = text.match(regexPattern);
-                    displayMatches(matches || []); // Call display function
-                    resolve(); // Resolve the promise to indicate OCR is done
+                    displayMatches(matches || []);
+                    resolve();
                 }).catch(err => {
                     console.error('OCR error:', err);
-                    reject(err); // Reject the promise if an error occurs
+                    reject(err);
                 });
             });
         }
 
         function displayMatches(matches) {
             console.log(matches)
-            // Clear the previous matches
+            matchesContainer.innerHTML = ''
             if (matches.length == 0) {
-                matchesContainer.innerHTML = 'No 🍓 detected...'
+                matchesHeader.innerHTML = 'No 🍓 detected...'
             } else {
-                matchesContainer.innerHTML = ''
+                matchesHeader.innerHTML = ''
             }
 
-            // Show only the first 3 matches and add an ellipsis if necessary
             const maxMatches = 3;
-            matches.slice(0, maxMatches).forEach(match => {
+            matches.slice(0, maxMatches).forEach(m => {
                 const matchElement = document.createElement('li');
-                matchElement.textContent = match;
+                let numRs = (m.match(/[rR]/g) || []).length;
+                matchElement.textContent = `There are ${numRs} r's in ${m}`;
                 matchesContainer.appendChild(matchElement);
             });
 
-            // Add ellipsis if there are more than 3 matches
             if (matches.length > maxMatches) {
                 const ellipsisElement = document.createElement('li');
                 ellipsisElement.textContent = '...';
